@@ -3,22 +3,16 @@
 # Exit on error
 set -e
 
-if grep -q Raspberry /proc/cpuinfo; then
-    echo "Running on a Raspberry Pi"
-else
-    echo "Not running on a Raspberry Pi. Use at your own risk!"
-fi
-
 # Number of cores when running make
-JNUM=4
+JNUM=14
 
 # Where will the output go?
 OUTDIR="$(pwd)/pico"
 
 # Install dependencies
 GIT_DEPS="git"
-SDK_DEPS="cmake gcc-arm-none-eabi gcc g++"
-OPENOCD_DEPS="gdb-multiarch automake autoconf build-essential texinfo libtool libftdi-dev libusb-1.0-0-dev"
+SDK_DEPS="cmake gcc arm-none-eabi-gcc"
+OPENOCD_DEPS=" automake autoconf base-devel texinfo libtool libftdi libusb"
 VSCODE_DEPS="code"
 UART_DEPS="minicom"
 
@@ -32,8 +26,15 @@ else
 fi
 
 echo "Installing Dependencies"
-sudo apt update
-sudo apt install -y $DEPS
+sudo pacman -Syu
+sudo pacman -S --noconfirm $DEPS
+git clone https://aur.archlinux.org/gdb-multiarch.git
+echo "May need to install the GPG key with 'gpg --recv-key 92EDB04BFF325CF3'"
+cd gdb-multiarch
+makepkg -sri
+cd ..
+
+
 
 echo "Creating $OUTDIR"
 # Create pico directory to put everything in
@@ -61,10 +62,10 @@ do
         git submodule update --init
         cd $OUTDIR
 
-        # Define PICO_SDK_PATH in ~/.bashrc
+        # Define PICO_SDK_PATH in ~/.zshrc
         VARNAME="PICO_${REPO^^}_PATH"
-        echo "Adding $VARNAME to ~/.bashrc"
-        echo "export $VARNAME=$DEST" >> ~/.bashrc
+        echo "Adding $VARNAME to ~/.zshrc"
+        echo "export $VARNAME=$DEST" >> ~/.zshrc
         export ${VARNAME}=$DEST
     fi
 done
@@ -146,7 +147,7 @@ if [[ "$SKIP_VSCODE" == 1 ]]; then
     echo "Skipping VSCODE"
 else
     echo "Installing VSCODE"
-    sudo apt install -y $VSCODE_DEPS
+    sudo pacman -S --noconfirm $VSCODE_DEPS
 
     # Get extensions
     code --install-extension marus25.cortex-debug
@@ -158,8 +159,7 @@ fi
 if [[ "$SKIP_UART" == 1 ]]; then
     echo "Skipping uart configuration"
 else
-    sudo apt install -y $UART_DEPS
+    sudo pacman -S --noconfirm $UART_DEPS
     echo "Disabling Linux serial console (UART) so we can use it for pico"
-    sudo raspi-config nonint do_serial 2
     echo "You must run sudo reboot to finish UART setup"
 fi
